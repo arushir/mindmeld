@@ -13,3 +13,6 @@
 DEFAULT_TRAIN_SET_REGEX = r'train.*\.txt'
 DEFAULT_TEST_SET_REGEX = r'test.*\.txt'
 DEVCENTER_URL = 'https://devcenter.mindmeld.com'
+MINDMELD_LOCALES = ["en_AU", "nl_BE", "en_BZ", "en_CA", "zh_CN", "en_GB", "zh_HK", "en_IE",
+                    "en_IN", "en_JM", "zh_MO", "en_NZ", "en_PH", "en_TT", "en_TW", "en_US",
+                    "en_ZA", "nl_NL"]

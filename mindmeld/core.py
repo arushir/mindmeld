@@ -163,7 +163,7 @@ class Query:
 
     # TODO: look into using __slots__
 
-    def __init__(self, raw_text, processed_text, normalized_tokens, char_maps,
+    def __init__(self, raw_text, processed_text, normalized_tokens, char_maps, locale=None,
                  language=None, time_zone=None, timestamp=None, stemmed_tokens=None):
         """Creates a query object
 
@@ -180,6 +180,7 @@ class Query:
         self._texts = (raw_text, processed_text, norm_text)
         self._char_maps = char_maps
         self.system_entity_candidates = ()
+        self._locale = locale
         self._language = language
         self._time_zone = time_zone
         self._timestamp = timestamp
@@ -214,6 +215,13 @@ class Query:
     def language(self):
         """Language of the query specified using a 639-2 code."""
         return self._language
+
+    @property
+    def locale(self):
+        """Locale of the query specified from the list en_AU, nl_BE, nl_NL,
+            en_BZ, en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO,
+            en_NZ, en_PH, en_TT, zh_TW, en_US, en_ZA."""
+        return self._locale
 
     @property
     def time_zone(self):

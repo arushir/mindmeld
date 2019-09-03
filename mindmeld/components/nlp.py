@@ -215,8 +215,8 @@ class Processor(ABC):
         if not self.ready:
             raise ProcessorError('Processor not ready, models must be built or loaded first.')
 
-    def process(self, query_text, allowed_nlp_classes=None, language=None, time_zone=None,
-                timestamp=None, dynamic_resource=None, verbose=False):
+    def process(self, query_text, allowed_nlp_classes=None, locale=None, language=None,
+                time_zone=None, timestamp=None, dynamic_resource=None, verbose=False):
         """Processes the given query using the full hierarchy of natural language processing models \
         trained for this application.
 
@@ -226,6 +226,9 @@ class Processor(ABC):
             allowed_nlp_classes (dict, optional): A dictionary of the NLP hierarchy that is \
                 selected for NLP analysis. An example: ``{'smart_home': {'close_door': {}}}`` \
                 where smart_home is the domain and close_door is the intent.
+            locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+                 en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH,
+                 en_TT, zh_TW, en_US, en_ZA.
             language (str, optional): Language as specified using a 639-2 code; \
                 if omitted, English is assumed.
             time_zone (str, optional): The name of an IANA time zone, such as \
@@ -242,7 +245,7 @@ class Processor(ABC):
                  query.
         """
         query = self.create_query(
-            query_text, language=language, time_zone=time_zone, timestamp=timestamp)
+            query_text, language=language, locale=locale, time_zone=time_zone, timestamp=timestamp)
         return self.process_query(query, allowed_nlp_classes, dynamic_resource, verbose).to_dict()
 
     def process_query(self, query, allowed_nlp_classes=None, dynamic_resource=None, verbose=False):
@@ -298,11 +301,14 @@ class Processor(ABC):
         # process the list in series
         return tuple([getattr(self, func)(itm, *args, **kwargs) for itm in items])
 
-    def create_query(self, query_text, language=None, time_zone=None, timestamp=None):
+    def create_query(self, query_text, locale=None, language=None, time_zone=None, timestamp=None):
         """Creates a query with the given text.
 
         Args:
             query_text (str, list[str]): Text or list of texts to create a query object for.
+            locale (str, optional): The locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+                 en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ,
+                 en_PH, en_TT, zh_TW, en_US, en_ZA.
             language (str, optional): Language as specified using a 639-2 code such as 'eng' or
                 'spa'; if omitted, English is assumed.
             time_zone (str, optional): The name of an IANA time zone, such as
@@ -317,10 +323,10 @@ class Processor(ABC):
             query_text = ''
         if isinstance(query_text, (list, tuple)):
             return self._process_list(
-                query_text, 'create_query', language=language,
+                query_text, 'create_query', locale=locale, language=language,
                 time_zone=time_zone, timestamp=timestamp)
         return self.resource_loader.query_factory.create_query(
-            query_text, language=language, time_zone=time_zone, timestamp=timestamp)
+            query_text, language=language, locale=locale, time_zone=time_zone, timestamp=timestamp)
 
     def __repr__(self):
         msg = '<{} {!r} ready: {!r}, dirty: {!r}>'
@@ -571,6 +577,7 @@ class NaturalLanguageProcessor(Processor):
     def process(self, query_text,   # pylint: disable=arguments-differ
                 allowed_nlp_classes=None,
                 allowed_intents=None,
+                locale=None,
                 language=None, time_zone=None, timestamp=None,
                 dynamic_resource=None,
                 verbose=False):
@@ -585,6 +592,9 @@ class NaturalLanguageProcessor(Processor):
                 where smart_home is the domain and close_door is the intent.
             allowed_intents (list, optional): A list of allowed intents to use for \
                 the NLP processing.
+            locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+                 en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH,
+                 en_TT, zh_TW, en_US, en_ZA.
             language (str, optional): Language as specified using a 639-2 code; \
                 if omitted, English is assumed.
             time_zone (str, optional): The name of an IANA time zone, such as \
@@ -604,8 +614,9 @@ class NaturalLanguageProcessor(Processor):
             raise TypeError("'allowed_intents' and 'allowed_nlp_classes' cannot be used together")
         if allowed_intents:
             allowed_nlp_classes = self.extract_allowed_intents(allowed_intents)
+
         return super().process(query_text, allowed_nlp_classes=allowed_nlp_classes,
-                               language=language, time_zone=time_zone,
+                               language=language, time_zone=time_zone, locale=locale,
                                timestamp=timestamp, dynamic_resource=dynamic_resource,
                                verbose=verbose)
 
@@ -677,6 +688,9 @@ class DomainProcessor(Processor):
 
     def process(self, query_text,  # pylint: disable=arguments-differ
                 allowed_nlp_classes=None,
+                allowed_intents=None,
+                locale=None,
+                language=None,
                 time_zone=None, timestamp=None, dynamic_resource=None, verbose=False):
         """Processes the given input text using the hierarchy of natural language processing models \
         trained for this domain.
@@ -691,6 +705,13 @@ class DomainProcessor(Processor):
                     } \
                 where close_door is the intent. The intent belongs to the smart_home domain. \
                 If allowed_nlp_classes is None, we use the normal model predict functionality.
+            allowed_intents (list, optional): A list of allowed intents to use for \
+                the NLP processing.
+            locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+                 en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH,
+                 en_TT, zh_TW, en_US, en_ZA.
+            language (str, optional): Language as specified using a 639-2 code;
+                if omitted, English is assumed.
             time_zone (str, optional): The name of an IANA time zone, such as \
                 'America/Los_Angeles', or 'Asia/Kolkata' \
                 See the [tz database](https://www.iana.org/time-zones) for more information.
@@ -703,7 +724,11 @@ class DomainProcessor(Processor):
             (ProcessedQuery): A processed query object that contains the prediction results from \
                 applying the hierarchy of natural language processing models to the input text.
         """
-        query = self.create_query(query_text, time_zone=time_zone, timestamp=timestamp)
+        # Deprecated parameter
+        del allowed_intents
+
+        query = self.create_query(query_text, time_zone=time_zone, timestamp=timestamp,
+                                  language=language, locale=locale)
         processed_query = self.process_query(query, allowed_nlp_classes=allowed_nlp_classes,
                                              dynamic_resource=dynamic_resource, verbose=verbose)
         processed_query.domain = self.name
@@ -887,7 +912,7 @@ class IntentProcessor(Processor):
                 logger.info("Skipping entity recognizer evaluation for the '%s.%s' intent",
                             self.domain, self.name)
 
-    def process(self, query_text,  # pylint: disable=arguments-differ
+    def process(self, query_text, allowed_intents=None, locale=None, language=None,
                 time_zone=None, timestamp=None, dynamic_resource=None, verbose=False):
         """Processes the given input text using the hierarchy of natural language processing models
         trained for this intent.
@@ -895,6 +920,13 @@ class IntentProcessor(Processor):
         Args:
             query_text (str, list, tuple): The raw user text input, or a list of the n-best query
                 transcripts from ASR.
+            allowed_intents (list, optional): A list of allowed intents to use for \
+                the NLP processing.
+            locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+                 en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH,
+                 en_TT, zh_TW, en_US, en_ZA.
+            language (str, optional): Language as specified using a 639-2 code; \
+                if omitted, English is assumed.
             time_zone (str, optional): The name of an IANA time zone, such as
                 'America/Los_Angeles', or 'Asia/Kolkata'
                 See the [tz database](https://www.iana.org/time-zones) for more information.
@@ -906,7 +938,11 @@ class IntentProcessor(Processor):
             (ProcessedQuery): A processed query object that contains the prediction results from \
                 applying the hierarchy of natural language processing models to the input text.
         """
-        query = self.create_query(query_text, time_zone=time_zone, timestamp=timestamp)
+        # Deprecated parameter
+        del allowed_intents
+
+        query = self.create_query(query_text, time_zone=time_zone, timestamp=timestamp,
+                                  language=language, locale=locale)
         processed_query = self.process_query(query, dynamic_resource=dynamic_resource)
         processed_query.domain = self.domain
         processed_query.intent = self.name
@@ -1133,8 +1169,12 @@ class EntityProcessor(Processor):
     def _load(self, incremental_timestamp=None):
         try:
             model_path, incremental_model_path = path.get_role_model_paths(
-                self._app_path, self.domain, self.intent, self.type, timestamp=incremental_timestamp)
-            self.role_classifier.load(incremental_model_path if incremental_timestamp else model_path)
+                self._app_path, self.domain, self.intent, self.type,
+                timestamp=incremental_timestamp)
+
+            self.role_classifier.load(
+                incremental_model_path if incremental_timestamp else model_path)
+
             self.entity_resolver.load()
         except EntityResolverConnectionError:
             logger.warning('Cannot connect to ES, so Entity Resolver is not loaded.')

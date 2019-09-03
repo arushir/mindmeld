@@ -19,6 +19,7 @@ from enum import Enum
 from .core import Entity, QueryEntity, Span, _sort_by_lowest_time_grain
 from .exceptions import SystemEntityResolutionError
 from .system_entity_recognizer import SystemEntityRecognizer
+from .constants import MINDMELD_LOCALES
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +41,16 @@ class DucklingDimension(Enum):
     TIME = 'time'
 
 
-def get_candidates(query, entity_types=None, language=None, time_zone=None, timestamp=None):
+def get_candidates(query, entity_types=None, locale=None,
+                   language=None, time_zone=None, timestamp=None):
     """Identifies candidate system entities in the given query.
 
     Args:
         query (Query): The query to examine
         entity_types (list of str): The entity types to consider
+        locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+            en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH, en_TT, zh_TW, \
+            en_US, en_ZA.
         language (str, optional): Language as specified using a 639-2 code.
             If omitted, English is assumed.
         time_zone (str, optional): An IANA time zone id such as 'America/Los_Angeles'.
@@ -61,8 +66,9 @@ def get_candidates(query, entity_types=None, language=None, time_zone=None, time
     language = language or query.language
     time_zone = time_zone or query.time_zone
     timestamp = timestamp or query.timestamp
-    response, response_code = parse_numerics(query.text, dimensions=dims, language=language,
-                                             time_zone=time_zone, timestamp=timestamp)
+    response, response_code = parse_numerics(
+        query.text, dimensions=dims, locale=locale, language=language,
+        time_zone=time_zone, timestamp=timestamp)
     if response_code == SUCCESSFUL_HTTP_CODE:
         return [e for e in [_duckling_item_to_query_entity(query, item) for item in response]
                 if entity_types is None or e.entity.type in entity_types]
@@ -108,9 +114,9 @@ def parse_numerics(sentence, dimensions=None, language='EN', locale='en_US',
             temperature) to restrict the output to. If None, include all types
         language (str, optional): Language of the sentence specified using a 639-1 code. \
             If omitted, English is assumed.
-        locale (str, optional): The english locale being used, could be en_AU, en_BE, en_BZ, \
-            en_CA, en_CN, en_GB, en_HK, en_IE, en_IN, en_JM, en_MO, en_NZ, en_PH, en_TT, en_TW, \
-            en_US, en_ZA.
+        locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+             en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH, en_TT, zh_TW, \
+             en_US, en_ZA.
         time_zone (str, optional): An IANA time zone id such as 'America/Los_Angeles'. \
             If not specified, the system time zone is used.
         timestamp (long, optional): A unix millisecond timestamp used as the reference time. \
@@ -135,16 +141,18 @@ def parse_numerics(sentence, dimensions=None, language='EN', locale='en_US',
         'latent': True,
     }
 
-    valid_locales = ["en_AU", "en_BE", "en_BZ", "en_CA", "en_CN", "en_GB", "en_HK", "en_IE",
-                     "en_IN", "en_JM", "en_MO", "en_NZ", "en_PH", "en_TT", "en_TW", "en_US",
-                     "en_ZA"]
+    # Set the default locale to be en_us if the locale is not passed in and the langauge code
+    # is english
+    if not locale and language == 'EN':
+        locale = 'en_US'
+
     if locale:
-        if locale in valid_locales:
+        if locale in MINDMELD_LOCALES:
             data['locale'] = locale
         else:
             logger.error(
                 'Invalid locale provided, it should be from this set: %s. Ignoring argument.',
-                valid_locales)
+                MINDMELD_LOCALES)
     if dimensions is not None:
         data['dims'] = json.dumps(dimensions)
     if time_zone:
@@ -156,7 +164,6 @@ def parse_numerics(sentence, dimensions=None, language='EN', locale='en_US',
             # Convert a second grain unix timestamp to millisecond
             timestamp *= 1000
         data['reftime'] = timestamp
-
     return SystemEntityRecognizer.get_instance().get_response(data)
 
 

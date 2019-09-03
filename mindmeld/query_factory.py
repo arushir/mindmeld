@@ -36,11 +36,14 @@ class QueryFactory:
         self.preprocessor = preprocessor
         self.stemmer = nltk.stem.PorterStemmer()
 
-    def create_query(self, text, language=None, time_zone=None, timestamp=None):
+    def create_query(self, text, locale=None, language=None, time_zone=None, timestamp=None):
         """Creates a query with the given text.
 
         Args:
             text (str): Text to create a query object for
+            locale (str, optional): The  locale being used, could be en_AU, nl_BE, nl_NL en_BZ, \
+                 en_CA, zh_CN, en_GB, zh_HK, en_IE, en_IN, en_JM, zh_MO, en_NZ, en_PH, \
+                 en_TT, zh_TW, en_US, en_ZA.
             language (str, optional): Language as specified using a 639-2 code;
                 if omitted, English is assumed.
             time_zone (str, optional): An IANA time zone id to create the query relative to.
@@ -75,11 +78,11 @@ class QueryFactory:
         char_maps[(TEXT_FORM_PROCESSED, TEXT_FORM_NORMALIZED)] = forward
         char_maps[(TEXT_FORM_NORMALIZED, TEXT_FORM_PROCESSED)] = backward
 
-        query = Query(raw_text, processed_text, normalized_tokens, char_maps,
+        query = Query(raw_text, processed_text, normalized_tokens, char_maps, locale=locale,
                       language=language, time_zone=time_zone, timestamp=timestamp,
                       stemmed_tokens=stemmed_tokens)
         query.system_entity_candidates = sys_ent_rec.get_candidates(
-            query, language=language)
+            query, locale=locale, language=language)
         return query
 
     def normalize(self, text):
